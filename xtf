@@ -1,0 +1,6 @@
+#!/bin/sh
+
+export POSIXLY_CORRECT=yes
+
+# for shuffled commands -> filters start with a "-" so we can foocus on that
+
