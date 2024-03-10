@@ -1,6 +1,10 @@
 #!/bin/sh
+# Login: xvesela00
+# Autor: Adam Vesely
+# Datum: 10.3.2024
 
 export POSIXLY_CORRECT=yes
+export LC_ALL=C
 
-# for shuffled commands -> filters start with a "-" so we can foocus on that
+# for shuffled commands -> filters start with a "-" so we can focus on that
 
