@@ -6,5 +6,65 @@
 export POSIXLY_CORRECT=yes
 export LC_ALL=C
 
-# for shuffled commands -> filters start with a "-" so we can focus on that
+# zcat "$file"
+# same as surrounding it with backticks, but this is better (you can nest $($(...)))
+# DATE=$(date +'%Y-%m-%d %H:%M:%S') # this is the format that the dates should be in
+# If no arguments were passed
+if [ "$#" = 0 ]
+    then
+        # prints an error message from 1 (stdout) to 2 (stderr)
+        echo "ERROR: Wrong usage." >&2
+        echo "Use: \"./xtf -h\" or \"./xtf -help\" for more info."
+        exit 1
+fi
+# prints the usage of the script
+help() {
+    echo "Usage of \"./xtf\":"
+    echo "."
+}
+# while the number of args is greater than (-gt) zero
+while [ "$#" -gt 0 ]
+    do
+        case "$1" in
+        # checks if the first argument is equal to:
 
+            -h|--help)
+                help
+                exit 0
+                ;;
+            -a)
+                # shifts all args to the left ($2 becomes $1)
+                shift
+                DATETIME="$1" # after the date (non-inclusive)
+                shift
+                ;;
+            -b)
+                shift
+                DATETIME="$1" # before the date (non-inclusive)
+                shift
+                ;;
+            -c)
+                shift
+                CURRENCY="$1"
+                shift
+                ;;
+            *.gz)
+                FILE=$(zcat "$1")
+                shift
+                ;;
+            *.log)
+                FILE=$(cat "$1")
+                shift
+                ;;
+            *)
+                USER="$1"
+                shift
+                ;;
+        esac
+    done
+
+if [ "$FILE" = "" ]
+    then
+        echo "ERROR: No file detected" >&2
+        exit 1
+fi
