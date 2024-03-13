@@ -22,6 +22,12 @@ help() {
     echo "Usage of \"./xtf\":"
     echo "."
 }
+# list() {
+    
+# }
+COMMAND=list
+command_set=1
+# Arg parsing
 # while the number of args is greater than (-gt) zero
 while [ "$#" -gt 0 ]
     do
@@ -56,13 +62,25 @@ while [ "$#" -gt 0 ]
                 FILE=$(cat "$1")
                 shift
                 ;;
+            list|list-currency|status|profit)
+            # checks if a command has already been specified
+                if [ $command_set = 0 ]
+                    then
+                        echo "ERROR: Only one command is allowed!" >&2
+                        exit 1
+                fi
+                COMMAND="$1"
+                command_set=0
+                shift
+                ;;
             *)
                 USER="$1"
                 shift
                 ;;
         esac
     done
-
+# End of arg parsing
+# Checks for the file
 if [ "$FILE" = "" ]
     then
         echo "ERROR: No file detected" >&2
