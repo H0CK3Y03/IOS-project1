@@ -17,6 +17,13 @@ if [ "$#" = 0 ]
         echo "Use: \"./xtf -h\" or \"./xtf -help\" for more info."
         exit 1
 fi
+check_file() {
+    if [ "$FILE" = "" ]
+    then
+        echo "ERROR: No file detected" >&2
+        exit 1
+    fi
+}
 # prints the usage of the script
 help() {
     echo "Usage of \"./xtf\":"
@@ -55,11 +62,13 @@ while [ "$#" -gt 0 ]
                 shift
                 ;;
             *.gz)
-                FILE=$(zcat "$1")
+                # FILE=$(zcat "$1")
+                zcat "$1" | 
                 shift
                 ;;
             *.log)
-                FILE=$(cat "$1")
+                # FILE=$(cat "$1")
+                cmd "$1" | 
                 shift
                 ;;
             list|list-currency|status|profit)
@@ -86,3 +95,11 @@ if [ "$FILE" = "" ]
         echo "ERROR: No file detected" >&2
         exit 1
 fi
+
+# =${XTF_PROFIT:-20} if XTF_PROFIT is not set, then set it to 20
+# skús dať za ten sort ešte | awk 'NF'
+# echo -e na \n asi dobre, cojaviem
+# na spracovanie suboru : subshell eval pipe  ---> what the fuck ????
+# v date si vies naspecifikovat format 
+# user straight to awk? idk
+
