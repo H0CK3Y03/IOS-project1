@@ -29,9 +29,26 @@ help() {
     echo "Usage of \"./xtf\":"
     echo "."
 }
-# list() {
-    
-# }
+list() {
+    if [ "$TRADER" = "" ]
+        then
+            echo "$FILE"
+            exit 0
+    fi
+}
+list_currency() {
+    if [ "$TRADER" = "" ]
+        then
+            echo cat "$FILE"
+            exit 0
+    fi
+}
+status() {
+    echo status
+}
+profit() {
+    echo profit
+}
 COMMAND=list
 command_set=1
 # Arg parsing
@@ -45,32 +62,56 @@ while [ "$#" -gt 0 ]
                 help
                 exit 0
                 ;;
+
             -a)
                 # shifts all args to the left ($2 becomes $1)
                 shift
+                if [ "$1" = "" ]
+                    then
+                        echo "ERROR: No parameter passed for argument. Use \"-h\" or \"--help\" for more info." >&2
+                        exit 1
+                fi
+
                 DATETIME="$1" # after the date (non-inclusive)
                 shift
                 ;;
+
             -b)
                 shift
+                if [ "$1" = "" ]
+                    then
+                        echo "ERROR: No parameter passed for argument. Use \"-h\" or \"--help\" for more info." >&2
+                        exit 1
+                fi
+
                 DATETIME="$1" # before the date (non-inclusive)
                 shift
                 ;;
+
             -c)
                 shift
+                if [ "$1" = "" ]
+                    then
+                        echo "ERROR: No parameter passed for argument. Use \"-h\" or \"--help\" for more info." >&2
+                        exit 1
+                fi
+
                 CURRENCY="$1"
                 shift
                 ;;
+
             *.gz)
-                # FILE=$(zcat "$1")
-                zcat "$1" | 
+                FILE=$(zcat "$1")
+                # zcat "$1" | 
                 shift
                 ;;
+
             *.log)
-                # FILE=$(cat "$1")
-                cmd "$1" | 
+                FILE=$(cat "$1")
+                # cmd "$1" | 
                 shift
                 ;;
+
             list|list-currency|status|profit)
             # checks if a command has already been specified
                 if [ $command_set = 0 ]
@@ -82,8 +123,9 @@ while [ "$#" -gt 0 ]
                 command_set=0
                 shift
                 ;;
+
             *)
-                USER="$1"
+                TRADER="$1"
                 shift
                 ;;
         esac
@@ -96,10 +138,17 @@ if [ "$FILE" = "" ]
         exit 1
 fi
 
+case "$COMMAND" in
+    list) list ;;
+    list-currency) list_currency ;;
+    status) status ;;
+    profit) profit ;;
+esac
+
 # =${XTF_PROFIT:-20} if XTF_PROFIT is not set, then set it to 20
 # skús dať za ten sort ešte | awk 'NF'
 # echo -e na \n asi dobre, cojaviem
 # na spracovanie suboru : subshell eval pipe  ---> what the fuck ????
 # v date si vies naspecifikovat format 
-# user straight to awk? idk
+# TRADER straight to awk? idk
 
