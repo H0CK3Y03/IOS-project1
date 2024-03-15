@@ -151,6 +151,7 @@ while [ "$#" -gt 0 ]
         esac
     done
 # End of arg parsing
+
 # Checks for the file
 if [ "$FILE" = "" ]
     then
@@ -169,6 +170,13 @@ esac
 # skús dať za ten sort ešte | awk 'NF'
 # echo -e na \n asi dobre, cojaviem
 # na spracovanie suboru : subshell eval pipe  ---> what the fuck ????
-# v date si vies naspecifikovat format 
+# v date si vies naspecifikovat format || date -d abo daco take idkkk xddd
 # TRADER straight to awk? idk
-
+# time ./test_xtf.sh 2> /dev/null > /dev/null     ||||| na testy rychlosti potom
+# uniq -> proti dupllicitnym riadkom
+# grep na vyberanie specifickych riadkov
+# napr. fgrep -> fast grep, snad moze byt, uvidime
+# cut -> vyberanie stlpcov podla oddelovaca
+# awk is the best for structured files (like columns...)
+# : $1 = 1st column in awk
+# $24tildaAHOJ -> if AHOJ in 24th column, print
