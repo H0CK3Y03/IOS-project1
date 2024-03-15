@@ -24,6 +24,26 @@ check_FILES() {
         exit 1
     fi
 }
+add_file() {
+    if [ $file_count = 0 ]
+        then
+            FILES="$1"
+            file_count=1
+        else
+            FILES="$FILES $1" # to FILES, writes all existing plus new file
+            _=$((file_count+=1)) # increments the file_count
+    fi
+}
+add_currency() {
+    if [ $currency_count = 0 ]
+        then
+            CURRENCIES="$1"
+            currency_count=1
+        else
+            CURRENCIES="$CURRENCIES $1" # to CURRENCIES, writes all existing plus new currency
+            _=$((currency_count+=1)) # increments the currency_count
+    fi
+}
 # prints the usage of the script
 help() {
     echo ""
@@ -40,11 +60,11 @@ help() {
     echo "FILTER -> a combination of:"
     echo "  \"-a DATETIME\" -> considers records after the specified date (non-inclusive)"
     echo "  \"-b DATETIME\" -> considers records before the specified date (non-inclusive)"
-    echo "  \"-c CURRENCY\" -> considers records containing the specified currencies"
+    echo "  \"-c CURRENCIES\" -> considers records containing the specified currencies"
     echo ""
     echo "COMMAND -> can be one of:"
     echo "  \"list\" -> displays a list of records for a specified TRADER"
-    echo "  \"list-currency\" -> displays a list of sorted records for a CURRENCY"
+    echo "  \"list-CURRENCIES\" -> displays a list of sorted records for a CURRENCIES"
     echo "  \"status\" -> displays the actual account status grouped and sorted by currencies"
     echo "  \"profit\" -> displays the account status with theoretical income grouped and sorted by currencies"
     echo ""
@@ -52,11 +72,11 @@ help() {
 list() {
     if [ "$TRADER" = "" ]
         then
-            echo "$FILES"
+            zcat "$FILES" | sort
             exit 0
     fi
 }
-list_currency() {
+list_CURRENCIES() {
     if [ "$TRADER" = "" ]
         then
             echo "$FILES"
@@ -72,6 +92,7 @@ profit() {
 COMMAND=list
 command_set=1
 file_count=0
+currency_count=0
 # Arg parsing
 # while the number of filters is greater than (-gt) zero
 while [ "$#" -gt 0 ]
@@ -116,12 +137,11 @@ while [ "$#" -gt 0 ]
                         echo "ERROR: No parameter passed for argument. Use \"-h\" or \"--help\" for more info." >&2
                         exit 1
                 fi
-
-                CURRENCY="$1"
+                add_currency "$1"
                 shift
                 ;;
 
-            list|list-currency|status|profit)
+            list|list-CURRENCIES|status|profit)
             # checks if a command has already been specified
                 if [ $command_set = 0 ]
                     then
@@ -136,21 +156,14 @@ while [ "$#" -gt 0 ]
             *.gz)
                 check_FILES "$1"
                 # send FILES to awk: -P (posix mode) -F (field seperator with parameter)
-                if [ $file_count = 0 ]
-                    then
-                        FILES="$1"
-                        file_count=1
-                    else
-                        FILES="$FILES $1" # to FILES, writes all existing plus new file
-                        _=$((file_count+=1)) # increments the file_count
-                fi
+                add_file "$1"
                 # echo "$1"
                 shift
                 ;;
 
             *.log)
                 check_FILES "$1"
-                echo "$1" | awk -P -F ";"
+                add_file "$1"
                 shift
                 ;;
 
@@ -161,11 +174,10 @@ while [ "$#" -gt 0 ]
         esac
     done
 # End of filter parsing
-echo "$FILES"
-
+echo "$CURRENCIES"
 case "$COMMAND" in
     list) list ;;
-    list-currency) list_currency ;;
+    list-CURRENCIES) list_CURRENCIES ;;
     status) status ;;
     profit) profit ;;
 esac
