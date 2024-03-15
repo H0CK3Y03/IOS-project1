@@ -18,7 +18,7 @@ if [ "$#" = 0 ]
         exit 1
 fi
 check_file() {
-    if [ "$FILE" = "" ]
+    if [ "$1" = "" ]
     then
         echo "ERROR: No file detected" >&2
         exit 1
@@ -120,18 +120,6 @@ while [ "$#" -gt 0 ]
                 shift
                 ;;
 
-            *.gz)
-                FILE=$(zcat "$1")
-                # zcat "$1" | 
-                shift
-                ;;
-
-            *.log)
-                FILE=$(cat "$1")
-                # cmd "$1" | 
-                shift
-                ;;
-
             list|list-currency|status|profit)
             # checks if a command has already been specified
                 if [ $command_set = 0 ]
@@ -144,6 +132,19 @@ while [ "$#" -gt 0 ]
                 shift
                 ;;
 
+            *.gz)
+                check_file "$1"
+                # send file to awk: -P (posix mode) -F (field seperator with parameter)
+                zcat "$1" | awk -P -F ";"
+                shift
+                ;;
+
+            *.log)
+                check_file "$1"
+                echo "$1" | awk -P -F ";"
+                shift
+                ;;
+
             *)
                 TRADER="$1"
                 shift
@@ -151,13 +152,6 @@ while [ "$#" -gt 0 ]
         esac
     done
 # End of arg parsing
-
-# Checks for the file
-if [ "$FILE" = "" ]
-    then
-        echo "ERROR: No file detected" >&2
-        exit 1
-fi
 
 case "$COMMAND" in
     list) list ;;
@@ -180,3 +174,4 @@ esac
 # awk is the best for structured files (like columns...)
 # : $1 = 1st column in awk
 # $24tildaAHOJ -> if AHOJ in 24th column, print
+# make seperate function for parsing names and files, then use return to pipe elsewhere
