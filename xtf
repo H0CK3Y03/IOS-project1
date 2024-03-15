@@ -6,7 +6,7 @@
 export POSIXLY_CORRECT=yes
 export LC_ALL=C
 
-# zcat "$file"
+# zcat "$FILES"
 # same as surrounding it with backticks, but this is better (you can nest $($(...)))
 # DATE=$(date +'%Y-%m-%d %H:%M:%S') # this is the format that the dates should be in
 # If no arguments were passed
@@ -17,10 +17,10 @@ if [ "$#" = 0 ]
         echo "Use: \"./xtf -h\" or \"./xtf -help\" for more info."
         exit 1
 fi
-check_file() {
+check_FILES() {
     if [ "$1" = "" ]
     then
-        echo "ERROR: No file detected" >&2
+        echo "ERROR: No FILES detected" >&2
         exit 1
     fi
 }
@@ -52,14 +52,14 @@ help() {
 list() {
     if [ "$TRADER" = "" ]
         then
-            echo "$FILE"
+            echo "$FILES"
             exit 0
     fi
 }
 list_currency() {
     if [ "$TRADER" = "" ]
         then
-            echo "$FILE"
+            echo "$FILES"
             exit 0
     fi
 }
@@ -71,8 +71,9 @@ profit() {
 }
 COMMAND=list
 command_set=1
+file_count=0
 # Arg parsing
-# while the number of args is greater than (-gt) zero
+# while the number of filters is greater than (-gt) zero
 while [ "$#" -gt 0 ]
     do
         case "$1" in
@@ -133,14 +134,22 @@ while [ "$#" -gt 0 ]
                 ;;
 
             *.gz)
-                check_file "$1"
-                # send file to awk: -P (posix mode) -F (field seperator with parameter)
-                zcat "$1" | awk -P -F ";"
+                check_FILES "$1"
+                # send FILES to awk: -P (posix mode) -F (field seperator with parameter)
+                if [ $file_count = 0 ]
+                    then
+                        FILES="$1"
+                        file_count=1
+                    else
+                        FILES="$FILES $1" # to FILES, writes all existing plus new file
+                        _=$((file_count+=1)) # increments the file_count
+                fi
+                # echo "$1"
                 shift
                 ;;
 
             *.log)
-                check_file "$1"
+                check_FILES "$1"
                 echo "$1" | awk -P -F ";"
                 shift
                 ;;
@@ -151,7 +160,8 @@ while [ "$#" -gt 0 ]
                 ;;
         esac
     done
-# End of arg parsing
+# End of filter parsing
+echo "$FILES"
 
 case "$COMMAND" in
     list) list ;;
@@ -171,7 +181,7 @@ esac
 # grep na vyberanie specifickych riadkov
 # napr. fgrep -> fast grep, snad moze byt, uvidime
 # cut -> vyberanie stlpcov podla oddelovaca
-# awk is the best for structured files (like columns...)
+# awk is the best for structured FILESs (like columns...)
 # : $1 = 1st column in awk
 # $24tildaAHOJ -> if AHOJ in 24th column, print
-# make seperate function for parsing names and files, then use return to pipe elsewhere
+# make seperate function for parsing names and FILESs, then use return to pipe elsewhere
