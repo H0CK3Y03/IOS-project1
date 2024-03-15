@@ -26,8 +26,28 @@ check_file() {
 }
 # prints the usage of the script
 help() {
+    echo ""
     echo "Usage of \"./xtf\":"
-    echo "."
+    echo ""
+    echo "--------------------------------------------------------------------"
+    echo "./xtf [-h|--help] [FILTER] [COMMAND] TRADER LOG [LOG2 [...]"
+    echo "--------------------------------------------------------------------"
+    echo ""
+    echo "\"-h\" | \"--help\" -> prints info on how to use the script"
+    echo ""
+    echo "TRADER -> the user"
+    echo ""
+    echo "FILTER -> a combination of:"
+    echo "  \"-a DATETIME\" -> considers records after the specified date (non-inclusive)"
+    echo "  \"-b DATETIME\" -> considers records before the specified date (non-inclusive)"
+    echo "  \"-c CURRENCY\" -> considers records containing the specified currencies"
+    echo ""
+    echo "COMMAND -> can be one of:"
+    echo "  \"list\" -> displays a list of records for a specified TRADER"
+    echo "  \"list-currency\" -> displays a list of sorted records for a CURRENCY"
+    echo "  \"status\" -> displays the actual account status grouped and sorted by currencies"
+    echo "  \"profit\" -> displays the account status with theoretical income grouped and sorted by currencies"
+    echo ""
 }
 list() {
     if [ "$TRADER" = "" ]
@@ -39,7 +59,7 @@ list() {
 list_currency() {
     if [ "$TRADER" = "" ]
         then
-            echo cat "$FILE"
+            echo "$FILE"
             exit 0
     fi
 }
