@@ -10,7 +10,8 @@ date_error="No date found"
 currency_error="No currency found"
 file_error="No files found"
 export XTF_PROFIT=20
-# set -x # debugs the script
+# set -e
+set -x # debugs the script
 
 # zcat "$FILES"
 # same as surrounding it with backticks, but this is better (you can nest $($(...)))
@@ -36,8 +37,7 @@ check_all() {
 }
 check_date() {
     case $1 in
-        [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\ [0-2][0-9]-[0-5][0-9]-[0-5][0-9])
-            echo "All good"
+        "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-2][0-9]:[0-5][0-9]:[0-5][0-9]")
             ;;
         *)
             echo "ERROR: Wrong date format. Use \"-h\" or \"--help\" for more info." >&2
@@ -45,12 +45,46 @@ check_date() {
             ;;
     esac
 }
-# check_file() {
-#     if "$1" != '' # TODO
-# }
-# error_output() {
-#     # TODO
-# }
+check_file() {
+    # echo "$2"
+    # cat "$1"
+    # echo ""
+    # for line in $2 "$1"
+    #     do
+    #     echo "$line"
+    #         if echo "$line" | grep -qE '^..*;[0-9]{4}-[0-9]{2}-[0-9]{2} [0-2][0-9]:[0-5][0-9]:[0-5][0-9];[A-Z]{3};[0-9, -][., 0-9]*$'
+    #             then
+    #                 echo "OKAY"
+    #         else
+    #             echo "NO"
+    #             echo "ERROR: wrong file format" >&2
+    #             exit 1
+    #         fi
+    #     done
+    # ^..*;[0-9]{4}-[0-9]{2}-[0-9]{2} [0-2][0-9]:[0-5][0-9]:[0-5][0-9];[A-Z]{3};[-]?[0-9][., 0-9]*$
+    awk -P -F ";" '
+    {
+        if(match($1, /..*/) && match($2, /[0-9]{4}-[0-9]{2}-[0-9]{2} [0-2][0-9]:[0-5][0-9]:[0-5][0-9]/) && match($3, /[A-Z]{3}/) && match($4, /[-]?[0-9][., 0-9]*$/))
+            ;
+        else
+            exit 1
+    }'
+    # echo "$?"
+    # awk -P -F ";" -v count=0 '
+    # /.*;[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-2][0-9]-[0-5][0-9]-[0-5][0-9];[a-zA-Z]*;[0-9, -]*/
+    # {
+    #     count+=1
+    # }
+    # END{if(count < NR) exit 1}
+    # '
+}
+file_error_output() {
+    if [ "$1" = 1 ]
+        then
+            echo "ERROR: wrong file format" >&2
+            exit 1
+    fi
+}
 add_file() {
     if [ $file_count = 0 ]
         then
@@ -210,11 +244,15 @@ while [ "$#" -gt 0 ]
                         # sends the contents of the file to the specified command
                         add_file "$1"
                         check_all
+                        cat "$1" | check_file
+                        file_error_output "$?"
                         cat "$1" | $COMMAND
                 elif echo "$1" | grep -q "\.gz$"
                     then
                         add_file "$1"
                         check_all
+                        zcat "$1" | check_file
+                        file_error_output "$?"
                         zcat "$1" | $COMMAND
                 else
                     if [ "$TRADER" != "" ]
