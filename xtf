@@ -50,7 +50,7 @@ check_date() {
 check_currency() {
     awk -F ";" '
     {
-        if(match($1, /^[A-Z]{3}$/))
+        if(match($1, /^[A-Za-z]{3}$/))
             ;
         else
             exit 1
@@ -59,7 +59,7 @@ check_currency() {
 check_file() {
     awk -P -F ";" '
     {
-        if(match($1, /..*/) && match($2, /[0-9]{4}-[0-9]{2}-[0-9]{2} [0-2][0-9]:[0-5][0-9]:[0-5][0-9]/) && match($3, /[A-Z]{3}/) && match($4, /[-]?[0-9][., 0-9]*$/))
+        if(match($1, /..*/) && match($2, /[0-9]{4}-[0-9]{2}-[0-9]{2} [0-2][0-9]:[0-5][0-9]:[0-5][0-9]/) && match($3, /[A-Za-z]{3}/) && match($4, /[-]?[0-9][., 0-9]*$/))
             ;
         else
             exit 1
@@ -98,6 +98,22 @@ add_currency() {
             CURRENCIES="$CURRENCIES $1" # to CURRENCIES, writes all existing plus new currency
             _=$((currency_count+=1)) # increments the currency_count
     fi
+}
+merge_files() {
+    for file in $FILES
+        do
+            if echo "$file" | grep -q "\.log$"
+                then
+                    cat "$file" | list
+            elif echo "$file" | grep -q "\.gz$"
+                then
+                    zcat "$file" | list
+            else
+                echo "ERROR: Wrong file!" >&2
+                exit 1
+            fi
+            echo "$COMMAND"
+        done | $COMMAND
 }
 # prints the usage of the script
 help() {
@@ -148,10 +164,42 @@ list_currency() {
     list | awk -P -F ";" ' {print $3}' | sort -u
 }
 status() {
-    list | awk -P -F ";" ''
+    list | awk -P -F ";" -v currencies="$CURRENCIES" '
+    BEGIN {
+        # Split the passed currencies into an array
+        split(currencies, currency_array, " ")
+    }
+
+    {
+        # make an associative array (key:value) and keep a sum for each currency
+        # $3 is a currency, $4 is the value
+        sum[$3] += $4
+    }
+
+    END {
+        # Print the sums for each currency
+        for(currency in sum) {
+            # C type printing (to print 4 decimal points)
+            printf "%s : %.4f\n", currency, sum[currency]
+        }
+    }' | sort -k1
 }
+
 profit() {
-    echo profit
+    status | awk -P -F " : " -v profit="$XTF_PROFIT" '
+    {
+        if($2 < 0) {
+           fict_sum[$1] += $2
+        }
+        else {
+            fict_sum[$1] += $2 + ($2 * (profit / 100))
+        }
+    }
+    END {
+        for(currency in fict_sum) {
+            printf "%s : %.4f\n", currency, fict_sum[currency]
+        }
+    }' | sort -k1
 }
 COMMAND=list
 command_set=0
@@ -179,6 +227,7 @@ while [ "$#" -gt 0 ]
                 fi
                 echo "$1" | check_date
                 error_output "$?"
+                # exits with exit 1 if last error code was 1
                 DATETIME_AFTER="$1" # after the date (non-inclusive)
                 shift
                 ;;
@@ -223,6 +272,7 @@ while [ "$#" -gt 0 ]
             *)
                 # uses grep and regex to check the type of the file
                 if echo "$1" | grep -q "\.log$"
+                # .log files
                     then
                         # sends the contents of the file to the specified command
                         add_file "$1"
@@ -230,16 +280,24 @@ while [ "$#" -gt 0 ]
                         cat "$1" | check_file
                         error_output "$?"
                         check_permissions "$1"
-                        cat "$1" | $COMMAND
+                        if [ "$COMMAND" = "list" ] || [ $COMMAND = "list_currency" ]
+                            then
+                                cat "$1" | $COMMAND
+                        fi
                 elif echo "$1" | grep -q "\.gz$"
+                # .gz files
                     then
                         add_file "$1"
                         check_all
                         zcat "$1" | check_file
                         error_output "$?"
                         check_permissions "$1"
-                        zcat "$1" | $COMMAND
+                        if [ "$COMMAND" = "list" ] || [ $COMMAND = "list_currency" ]
+                            then
+                                zcat "$1" | $COMMAND
+                        fi
                 else
+                # the user
                     if [ "$TRADER" != "" ]
                         then
                             echo "ERROR: Max 1 user. Use \"-h\" or \"--help\" for more info." >&2
@@ -252,6 +310,10 @@ while [ "$#" -gt 0 ]
                 ;;
         esac
     done
+if [ "$COMMAND" = "status" ] || [ "$COMMAND" = "profit" ]
+    then
+        merge_files
+fi
 # End of filter parsing
 # echo "$file_count"
 # check_args "$FILES" "$file_error"
@@ -260,15 +322,10 @@ while [ "$#" -gt 0 ]
 # echo -e na \n asi dobre, cojaviem
 # time ./test_xtf.sh 2> /dev/null > /dev/null     ||||| na testy rychlosti potom
 # cut -> vyberanie stlpcov podla oddelovaca
-# awk is the best for structured FILESs (like columns...)
-# : $1 = 1st column in awk
-# $24tildaAHOJ -> if AHOJ in 24th column, print
 # getline seems useful in awk
 # make seperate function for parsing names and FILESs, then use return to pipe elsewhere
 # set -e  -> should help with exiting parent shell from subshell -> every non-zero exit code turns off the script
 # gzip -de  -> instead of zcat if needed
 # date -d > /dev/null
-# if [ ! -r subor ] -> for checking permissions to a file
 #  if ! Echo file | grep -qE regex  -> for exiting out of awk from a pipeline?
-# Asi len empty riadok by som ignoroval, teda \n\n  -> v suboru
 # time ./xtf big_file.log  > /dev/null  -> for checking time, 0.881 is time to beat
