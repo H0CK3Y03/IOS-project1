@@ -9,9 +9,12 @@ trader_error="No user found!"
 date_error="No date found"
 currency_error="No currency found"
 file_error="No files found"
-export XTF_PROFIT=20
+if [ "$XTF_PROFIT" = "" ]
+    then
+        export XTF_PROFIT=20
+fi
 # set -e
-set -x # debugs the script
+# set -x # debugs the script
 
 # zcat "$FILES"
 # same as surrounding it with backticks, but this is better (you can nest $($(...)))
@@ -36,32 +39,24 @@ check_all() {
     check_args "$FILES" "$file_error"
 }
 check_date() {
-    case $1 in
-        "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-2][0-9]:[0-5][0-9]:[0-5][0-9]")
-            ;;
-        *)
-            echo "ERROR: Wrong date format. Use \"-h\" or \"--help\" for more info." >&2
+    awk -P -F ";" '
+    {
+        if(match($1, /[0-9]{4}-[0-9]{2}-[0-9]{2} [0-2][0-9]:[0-5][0-9]:[0-5][0-9]/))
+            ;
+        else
             exit 1
-            ;;
-    esac
+    }'
+}
+check_currency() {
+    awk -F ";" '
+    {
+        if(match($1, /^[A-Z]{3}$/))
+            ;
+        else
+            exit 1
+    }'
 }
 check_file() {
-    # echo "$2"
-    # cat "$1"
-    # echo ""
-    # for line in $2 "$1"
-    #     do
-    #     echo "$line"
-    #         if echo "$line" | grep -qE '^..*;[0-9]{4}-[0-9]{2}-[0-9]{2} [0-2][0-9]:[0-5][0-9]:[0-5][0-9];[A-Z]{3};[0-9, -][., 0-9]*$'
-    #             then
-    #                 echo "OKAY"
-    #         else
-    #             echo "NO"
-    #             echo "ERROR: wrong file format" >&2
-    #             exit 1
-    #         fi
-    #     done
-    # ^..*;[0-9]{4}-[0-9]{2}-[0-9]{2} [0-2][0-9]:[0-5][0-9]:[0-5][0-9];[A-Z]{3};[-]?[0-9][., 0-9]*$
     awk -P -F ";" '
     {
         if(match($1, /..*/) && match($2, /[0-9]{4}-[0-9]{2}-[0-9]{2} [0-2][0-9]:[0-5][0-9]:[0-5][0-9]/) && match($3, /[A-Z]{3}/) && match($4, /[-]?[0-9][., 0-9]*$/))
@@ -69,19 +64,18 @@ check_file() {
         else
             exit 1
     }'
-    # echo "$?"
-    # awk -P -F ";" -v count=0 '
-    # /.*;[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-2][0-9]-[0-5][0-9]-[0-5][0-9];[a-zA-Z]*;[0-9, -]*/
-    # {
-    #     count+=1
-    # }
-    # END{if(count < NR) exit 1}
-    # '
 }
-file_error_output() {
+check_permissions() {
+    if [ ! -r "$1" ]
+        then
+            echo "ERROR: Permission denied!" >&2
+            exit 1
+    fi
+}
+error_output() {
     if [ "$1" = 1 ]
         then
-            echo "ERROR: wrong file format" >&2
+            echo "ERROR!" >&2
             exit 1
     fi
 }
@@ -151,25 +145,10 @@ list() {
     }'
 }
 list_currency() {
-    awk -P -F ";" -v user="$TRADER" -v date_after="$DATETIME_AFTER" -v date_before="$DATETIME_BEFORE" -v currencies="$CURRENCIES" ' 
-    {
-        if (currencies != "") {
-            num_of_currencies=split(currencies, currency_list, " ") 
-            # split returns number of values in the array
-        }
-        else {
-            num_of_currencies = 1
-            currency_list[1] = ""
-        }
-        for(i=1; i<=num_of_currencies; i++) {
-            if ($1 == user && ($2 > date_after || date_after == "") && ($2 < date_before || date_before == "") && ($3 == currency_list[i] || currency_list[i] == "")) {
-                print $3
-            }
-        }
-    }' | sort -u
+    list | awk -P -F ";" ' {print $3}' | sort -u
 }
 status() {
-    echo status
+    list | awk -P -F ";" ''
 }
 profit() {
     echo profit
@@ -198,7 +177,8 @@ while [ "$#" -gt 0 ]
                         echo "ERROR: Only one date_after is allowed!" >&2
                         exit 1
                 fi
-                check_date "$1"
+                echo "$1" | check_date
+                error_output "$?"
                 DATETIME_AFTER="$1" # after the date (non-inclusive)
                 shift
                 ;;
@@ -210,13 +190,16 @@ while [ "$#" -gt 0 ]
                         echo "ERROR: Only one date_before is allowed!" >&2
                         exit 1
                 fi
-                check_date "$1"
+                echo "$1" | check_date
+                error_output "$?"
                 DATETIME_BEFORE="$1" # before the date (non-inclusive)
                 shift
                 ;;
 
             -c)
                 shift
+                echo "$1" | check_currency
+                error_output "$?"
                 add_currency "$1"
                 shift
                 ;;
@@ -245,14 +228,16 @@ while [ "$#" -gt 0 ]
                         add_file "$1"
                         check_all
                         cat "$1" | check_file
-                        file_error_output "$?"
+                        error_output "$?"
+                        check_permissions "$1"
                         cat "$1" | $COMMAND
                 elif echo "$1" | grep -q "\.gz$"
                     then
                         add_file "$1"
                         check_all
                         zcat "$1" | check_file
-                        file_error_output "$?"
+                        error_output "$?"
+                        check_permissions "$1"
                         zcat "$1" | $COMMAND
                 else
                     if [ "$TRADER" != "" ]
@@ -272,16 +257,8 @@ while [ "$#" -gt 0 ]
 # check_args "$FILES" "$file_error"
 
 # =${XTF_PROFIT:-20} if XTF_PROFIT is not set, then set it to 20
-# skús dať za ten sort ešte | awk 'NF'
 # echo -e na \n asi dobre, cojaviem
-# na spracovanie suboru : subshell eval pipe  ---> what the fuck ????
-# v date si vies naspecifikovat format || date -d abo daco take idkkk xddd
-# TRADER straight to awk? idk
 # time ./test_xtf.sh 2> /dev/null > /dev/null     ||||| na testy rychlosti potom
-# uniq -> proti dupllicitnym riadkom
-# or instead of uniq: sort -u
-# grep na vyberanie specifickych riadkov
-# napr. fgrep -> fast grep, snad moze byt, uvidime
 # cut -> vyberanie stlpcov podla oddelovaca
 # awk is the best for structured FILESs (like columns...)
 # : $1 = 1st column in awk
@@ -293,6 +270,5 @@ while [ "$#" -gt 0 ]
 # date -d > /dev/null
 # if [ ! -r subor ] -> for checking permissions to a file
 #  if ! Echo file | grep -qE regex  -> for exiting out of awk from a pipeline?
-# '^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2}$'  for date checking -> dat do premennej
 # Asi len empty riadok by som ignoroval, teda \n\n  -> v suboru
 # time ./xtf big_file.log  > /dev/null  -> for checking time, 0.881 is time to beat
