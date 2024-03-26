@@ -1,22 +1,18 @@
 #!/bin/sh
 # Login: xvesela00
 # Autor: Adam Vesely
-# Datum: 10.3.2024
+# Datum: 17.3.2024
 
 export POSIXLY_CORRECT=yes
 export LC_ALL=C
 trader_error="No user found!"
-date_error="No date found"
-currency_error="No currency found"
 file_error="No files found"
 if [ "$XTF_PROFIT" = "" ]
     then
         export XTF_PROFIT=20
 fi
-# set -e
 # set -x # debugs the script
 
-# zcat "$FILES"
 # same as surrounding it with backticks, but this is better (you can nest $($(...)))
 # DATE=$(date +'%Y-%m-%d %H:%M:%S') # this is the format that the dates should be in
 # If no arguments were passed
@@ -166,14 +162,14 @@ list_currency() {
 status() {
     list | awk -P -F ";" -v currencies="$CURRENCIES" '
     BEGIN {
-        # Split the passed currencies into an array
         split(currencies, currency_array, " ")
+        # splits the passed in currencies
     }
 
     {
+        sum[$3] += $4
         # make an associative array (key:value) and keep a sum for each currency
         # $3 is a currency, $4 is the value
-        sum[$3] += $4
     }
 
     END {
@@ -315,17 +311,3 @@ if [ "$COMMAND" = "status" ] || [ "$COMMAND" = "profit" ]
         merge_files
 fi
 # End of filter parsing
-# echo "$file_count"
-# check_args "$FILES" "$file_error"
-
-# =${XTF_PROFIT:-20} if XTF_PROFIT is not set, then set it to 20
-# echo -e na \n asi dobre, cojaviem
-# time ./test_xtf.sh 2> /dev/null > /dev/null     ||||| na testy rychlosti potom
-# cut -> vyberanie stlpcov podla oddelovaca
-# getline seems useful in awk
-# make seperate function for parsing names and FILESs, then use return to pipe elsewhere
-# set -e  -> should help with exiting parent shell from subshell -> every non-zero exit code turns off the script
-# gzip -de  -> instead of zcat if needed
-# date -d > /dev/null
-#  if ! Echo file | grep -qE regex  -> for exiting out of awk from a pipeline?
-# time ./xtf big_file.log  > /dev/null  -> for checking time, 0.881 is time to beat
